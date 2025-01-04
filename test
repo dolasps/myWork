@@ -1,0 +1,182 @@
+package org.example;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Scanner;
+
+public class SpringBootMicroserviceGenerator {
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        // Get project details
+        System.out.print("Enter the project name: ");
+        String projectName = scanner.nextLine();
+
+        System.out.print("Enter the database type (e.g., MySQL, PostgreSQL): ");
+        String databaseType = scanner.nextLine();
+
+        System.out.print("Enter the domain class name: ");
+        String domainClassName = scanner.nextLine();
+
+        String baseDir = projectName;
+
+        // Create project structure
+        try {
+            createDirectoryStructure(baseDir);
+            createPomFile(baseDir, projectName, databaseType);
+            createApplicationProperties(baseDir, databaseType);
+            createDomainClass(baseDir, domainClassName);
+            createRepositoryClass(baseDir, domainClassName);
+            createServiceClass(baseDir, domainClassName);
+            createControllerClass(baseDir, domainClassName);
+
+            System.out.println("Spring Boot microservice project generated successfully at " + baseDir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void createDirectoryStructure(String baseDir) throws IOException {
+        Files.createDirectories(Paths.get(baseDir, "src/main/java/com/example/controller"));
+        Files.createDirectories(Paths.get(baseDir, "src/main/java/com/example/service"));
+        Files.createDirectories(Paths.get(baseDir, "src/main/java/com/example/repository"));
+        Files.createDirectories(Paths.get(baseDir, "src/main/java/com/example/domain"));
+        Files.createDirectories(Paths.get(baseDir, "src/main/resources"));
+    }
+
+    private static void createPomFile(String baseDir, String projectName, String databaseType) throws IOException {
+        String content = "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+                + "    xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n"
+                + "    <modelVersion>4.0.0</modelVersion>\n"
+                + "    <groupId>com.example</groupId>\n"
+                + "    <artifactId>" + projectName + "</artifactId>\n"
+                + "    <version>0.0.1-SNAPSHOT</version>\n"
+                + "    <dependencies>\n"
+                + "        <dependency>\n"
+                + "            <groupId>org.springframework.boot</groupId>\n"
+                + "            <artifactId>spring-boot-starter-data-jpa</artifactId>\n"
+                + "        </dependency>\n"
+                + "        <dependency>\n"
+                + "            <groupId>org.springframework.boot</groupId>\n"
+                + "            <artifactId>spring-boot-starter-web</artifactId>\n"
+                + "        </dependency>\n"
+                + "        " + getDatabaseDependency(databaseType) + "\n"
+                + "    </dependencies>\n"
+                + "</project>\n";
+        writeToFile(baseDir + "/pom.xml", content);
+    }
+
+    private static void createApplicationProperties(String baseDir, String databaseType) throws IOException {
+        String content = "spring.datasource.url=jdbc:" + databaseType.toLowerCase() + "://localhost:3306/" + databaseType + "\n"
+                + "spring.datasource.username=root\n"
+                + "spring.datasource.password=root\n"
+                + "spring.jpa.hibernate.ddl-auto=update\n";
+
+        writeToFile(baseDir + "/src/main/resources/application.properties", content);
+    }
+
+    private static void createDomainClass(String baseDir, String className) throws IOException {
+        String content = "package com.example.domain;\n\n"
+                + "import javax.persistence.Entity;\n"
+                + "import javax.persistence.Id;\n\n"
+                + "@Entity\n"
+                + "public class " + className + " {\n\n"
+                + "    @Id\n"
+                + "    private Long id;\n\n"
+                + "    private String name;\n\n"
+                + "    // Getters and setters\n"
+                + "    public Long getId() {\n"
+                + "        return id;\n"
+                + "    }\n\n"
+                + "    public void setId(Long id) {\n"
+                + "        this.id = id;\n"
+                + "    }\n\n"
+                + "    public String getName() {\n"
+                + "        return name;\n"
+                + "    }\n\n"
+                + "    public void setName(String name) {\n"
+                + "        this.name = name;\n"
+                + "    }\n"
+                + "}\n";
+
+        writeToFile(baseDir + "/src/main/java/com/example/domain/" + className + ".java", content);
+    }
+
+    private static void createRepositoryClass(String baseDir, String className) throws IOException {
+        String content = "package com.example.repository;\n\n"
+                + "import com.example.domain." + className + ";\n"
+                + "import org.springframework.data.jpa.repository.JpaRepository;\n\n"
+                + "public interface " + className + "Repository extends JpaRepository<" + className + ", Long> {\n"
+                + "}\n";
+
+        writeToFile(baseDir + "/src/main/java/com/example/repository/" + className + "Repository.java", content);
+    }
+
+    private static void createServiceClass(String baseDir, String className) throws IOException {
+        String content = "package com.example.service;\n\n"
+                + "import com.example.repository." + className + "Repository;\n"
+                + "import com.example.domain." + className + ";\n"
+                + "import org.springframework.stereotype.Service;\n\n"
+                + "import java.util.List;\n\n"
+                + "@Service\n"
+                + "public class " + className + "Service {\n\n"
+                + "    private final " + className + "Repository repository;\n\n"
+                + "    public " + className + "Service(" + className + "Repository repository) {\n"
+                + "        this.repository = repository;\n"
+                + "    }\n\n"
+                + "    public List<" + className + "> getAll() {\n"
+                + "        return repository.findAll();\n"
+                + "    }\n\n"
+                + "    public " + className + " save(" + className + " entity) {\n"
+                + "        return repository.save(entity);\n"
+                + "    }\n"
+                + "}\n";
+
+        writeToFile(baseDir + "/src/main/java/com/example/service/" + className + "Service.java", content);
+    }
+
+    private static void createControllerClass(String baseDir, String className) throws IOException {
+        String content = "package com.example.controller;\n\n"
+                + "import com.example.domain." + className + ";\n"
+                + "import com.example.service." + className + "Service;\n"
+                + "import org.springframework.web.bind.annotation.*;\n\n"
+                + "import java.util.List;\n\n"
+                + "@RestController\n"
+                + "@RequestMapping(\"/api/" + className.toLowerCase() + "s\")\n"
+                + "public class " + className + "Controller {\n\n"
+                + "    private final " + className + "Service service;\n\n"
+                + "    public " + className + "Controller(" + className + "Service service) {\n"
+                + "        this.service = service;\n"
+                + "    }\n\n"
+                + "    @GetMapping\n"
+                + "    public List<" + className + "> getAll() {\n"
+                + "        return service.getAll();\n"
+                + "    }\n\n"
+                + "    @PostMapping\n"
+                + "    public " + className + " create(@RequestBody " + className + " entity) {\n"
+                + "        return service.save(entity);\n"
+                + "    }\n"
+                + "}\n";
+
+        writeToFile(baseDir + "/src/main/java/com/example/controller/" + className + "Controller.java", content);
+    }
+
+    private static String getDatabaseDependency(String databaseType) {
+        switch (databaseType.toLowerCase()) {
+            case "mysql":
+                return "<dependency><groupId>mysql</groupId><artifactId>mysql-connector-java</artifactId><scope>runtime</scope></dependency>";
+            case "postgresql":
+                return "<dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>";
+            default:
+                return "";
+        }
+    }
+
+    private static void writeToFile(String filePath, String content) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            writer.write(content);
+        }
+    }
+}

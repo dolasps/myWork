@@ -203,7 +203,8 @@ public class SpringBootMicroserviceGenerator {
         return str.substring(0, 1).toUpperCase() + str.substring(1);
     }
 
-    private static void writeToFile(String filePath, String content) throws IOException {
+     private static void writeToFile(String filePath, String content) throws IOException {
+        Files.createDirectories(Paths.get(filePath).getParent());
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             writer.write(content);
         }

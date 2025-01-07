@@ -1,0 +1,101 @@
+2. Containerize with Docker
+Create Dockerfile: Add a Dockerfile in the root of the project:
+
+dockerfile
+Copy code
+FROM openjdk:17-jdk-slim
+ARG JAR_FILE=build/libs/*.jar
+COPY ${JAR_FILE} app.jar
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+Build the Jar: Run ./gradlew bootJar to generate the JAR file in build/libs.
+
+Build the Docker Image: Run the following command to build the Docker image:
+
+bash
+Copy code
+docker build -t spring-boot-app:latest .
+Run the Docker Container:
+
+bash
+Copy code
+docker run -p 8080:8080 spring-boot-app:latest
+3. Deploy to Azure Kubernetes Service (AKS)
+Create AKS Cluster:
+
+Use Azure Portal or CLI to create an AKS cluster:
+bash
+Copy code
+az aks create --resource-group <resource-group> --name <aks-cluster-name> --node-count 1 --enable-addons monitoring --generate-ssh-keys
+Install kubectl and Azure CLI Extensions:
+
+Install and configure kubectl to access your AKS cluster:
+bash
+Copy code
+az aks get-credentials --resource-group <resource-group> --name <aks-cluster-name>
+Push the Docker Image to Azure Container Registry (ACR):
+
+Create an ACR:
+bash
+Copy code
+az acr create --resource-group <resource-group> --name <acr-name> --sku Basic
+Login and tag your image:
+bash
+Copy code
+az acr login --name <acr-name>
+docker tag spring-boot-app:latest <acr-name>.azurecr.io/spring-boot-app:latest
+docker push <acr-name>.azurecr.io/spring-boot-app:latest
+Deploy the Application to AKS:
+
+Create a Kubernetes deployment and service YAML file (deployment.yaml):
+
+yaml
+Copy code
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-app
+  template:
+    metadata:
+      labels:
+        app: spring-boot-app
+    spec:
+      containers:
+      - name: spring-boot-app
+        image: <acr-name>.azurecr.io/spring-boot-app:latest
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: spring-boot-app
+Apply the configuration:
+
+bash
+Copy code
+kubectl apply -f deployment.yaml
+Access the Application:
+
+Get the external IP address of the LoadBalancer service:
+bash
+Copy code
+kubectl get service spring-boot-service
+Access the application using the external IP.
+4. Monitor and Manage:
+Use Azure Monitor and Kubernetes Dashboard for observability.
+Implement readiness and liveness probes in your Kubernetes deployment for better reliability.
+Let me know if you need further clarification on any step!
+
+
